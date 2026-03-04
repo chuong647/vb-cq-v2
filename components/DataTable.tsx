@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { motion } from 'motion/react';
 import { ExtractedDocument, ThemeConfig } from '../types';
 import { FileSearch, ClipboardList } from 'lucide-react';
 
@@ -14,13 +15,17 @@ export const DataTable: React.FC<DataTableProps> = ({ data, theme }) => {
 
   if (data.length === 0) {
     return (
-      <div className={`flex flex-col items-center justify-center py-20 px-4 text-center bg-white/50 backdrop-blur-sm rounded-3xl border-2 border-dashed border-${g}-200 animate-in fade-in zoom-in duration-500`}>
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className={`flex flex-col items-center justify-center py-20 px-4 text-center bg-white/50 backdrop-blur-sm rounded-3xl border-2 border-dashed border-${g}-200`}
+      >
         <div className={`p-4 bg-${p}-50 text-${p}-400 rounded-full mb-4`}>
           <FileSearch size={48} strokeWidth={1.5} />
         </div>
         <h3 className={`text-xl font-bold text-${g}-800`}>Chưa có dữ liệu trích xuất</h3>
         <p className={`text-${g}-500 mt-2 max-w-xs mx-auto`}>Vui lòng tải lên file PDF để bắt đầu quá trình bóc tách văn bản.</p>
-      </div>
+      </motion.div>
     );
   }
 
@@ -28,7 +33,13 @@ export const DataTable: React.FC<DataTableProps> = ({ data, theme }) => {
   const cellPadding = "px-4 py-3";
 
   return (
-    <div id="printable-table" className="overflow-hidden rounded-2xl shadow-xl bg-white border border-slate-200 animate-in fade-in slide-in-from-bottom-8 duration-700">
+    <motion.div 
+      id="printable-table" 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6 }}
+      className="overflow-hidden rounded-2xl shadow-xl bg-white border border-slate-200 no-print"
+    >
       <style>{`
         @media print {
           body * { visibility: hidden; background: white !important; }
@@ -38,15 +49,6 @@ export const DataTable: React.FC<DataTableProps> = ({ data, theme }) => {
           th { background: #f1f5f9 !important; -webkit-print-color-adjust: exact; }
           table { width: 100% !important; border-collapse: collapse !important; }
           td, th { border: 1px solid black !important; color: black !important; }
-        }
-        .row-stagger {
-          animation: slideIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-          opacity: 0;
-          will-change: transform, opacity;
-        }
-        @keyframes slideIn {
-          from { opacity: 0; transform: translateY(12px) scale(0.99); }
-          to { opacity: 1; transform: translateY(0) scale(1); }
         }
         .administrative-table th {
           background: linear-gradient(to bottom, #f8fafc, #f1f5f9);
@@ -81,16 +83,18 @@ export const DataTable: React.FC<DataTableProps> = ({ data, theme }) => {
           </thead>
           <tbody>
             {data.map((doc, index) => (
-              <tr 
+              <motion.tr 
                 key={index} 
-                className={`row-stagger group hover:bg-slate-50 transition-colors`}
-                style={{ animationDelay: `${Math.min(index * 0.05, 0.8)}s` }}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.05 }}
+                className={`group hover:bg-slate-50 transition-colors`}
               >
                 <td className={`${borderClass} ${cellPadding} align-top`}>
                   {doc.symbol || <span className="empty-field">—</span>}
                 </td>
                 <td className={`${borderClass} ${cellPadding} align-top text-center whitespace-nowrap`}>
-                  {doc.date.replace(/'/g, '') || <span className="empty-field">—</span>}
+                  {doc.date ? doc.date.replace(/^'/, '') : <span className="empty-field">—</span>}
                 </td>
                 <td className={`${borderClass} ${cellPadding} align-top text-justify leading-relaxed`}>
                   <span className="font-bold">{doc.docType}</span>&nbsp;{doc.summary}
@@ -101,7 +105,7 @@ export const DataTable: React.FC<DataTableProps> = ({ data, theme }) => {
                 <td className={`${borderClass} ${cellPadding} align-top text-center page-range-cell`}>
                   {doc.pageRange || <span className="empty-field">—</span>}
                 </td>
-              </tr>
+              </motion.tr>
             ))}
           </tbody>
         </table>
@@ -112,8 +116,8 @@ export const DataTable: React.FC<DataTableProps> = ({ data, theme }) => {
           <ClipboardList size={14} className={`text-${p}-500`} />
           Tổng cộng: {data.length} văn bản (đã giữ đúng thứ tự gốc)
         </div>
-        <div>DocuExtract AI Engine</div>
+        <div>DocuExtract AI Pro Engine</div>
       </div>
-    </div>
+    </motion.div>
   );
 };

@@ -1,5 +1,5 @@
 {
-  "name": "Tân Nhiều Cú",
-  "description": "Ứng dụng bóc tách thông tin văn bản hành chính từ file PDF sử dụng AI, hỗ trợ xuất Excel.",
+  "name": "DocuExtract AI Pro",
+  "description": "Hệ thống bóc tách và quản lý văn bản hành chính thông minh sử dụng trí tuệ nhân tạo Gemini, hỗ trợ lưu trữ chuyên nghiệp và xuất bản dữ liệu.",
   "requestFramePermissions": []
 }

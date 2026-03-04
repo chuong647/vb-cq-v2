@@ -1,13 +1,13 @@
 
 import React, { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { extractDataFromPdf } from './services/geminiService';
 import { DataTable } from './components/DataTable';
-import { BannerCarousel } from './components/BannerCarousel';
 import { exportToExcel } from './utils/excelExport';
-import { ExtractedDocument, ProcessingStatus, ExcelExportConfig, ThemeConfig, HistoryItem } from './types';
+import { ExtractedDocument, ProcessingStatus, ExcelExportConfig, ThemeConfig } from './types';
 import { 
   FileUp, FileSpreadsheet, Loader2, AlertCircle, Check, Copy, Settings, X, 
-  UploadCloud, History, Trash2, Cpu, Palette, Monitor, Printer, Info
+  UploadCloud, Cpu, Palette, Monitor, Printer, Info, RotateCcw
 } from 'lucide-react';
 
 const THEMES: ThemeConfig[] = [
@@ -31,13 +31,7 @@ const App: React.FC = () => {
   const [showNotification, setShowNotification] = useState<{message: string, type: 'success' | 'info' | 'error'} | null>(null);
   
   const [showConfigPanel, setShowConfigPanel] = useState<boolean>(false);
-  const [showHistory, setShowHistory] = useState<boolean>(false);
   
-  const [history, setHistory] = useState<HistoryItem[]>(() => {
-    const saved = localStorage.getItem('app_history');
-    return saved ? JSON.parse(saved) : [];
-  });
-
   const [backgroundColor] = useState<string>(() => localStorage.getItem('app_bg_color') || DEFAULT_BG_COLOR);
   const [currentTheme, setCurrentTheme] = useState<ThemeConfig>(() => {
     const savedThemeId = localStorage.getItem('app_theme_id');
@@ -56,7 +50,6 @@ const App: React.FC = () => {
   const p = currentTheme.primary;
   const g = currentTheme.gray;
 
-  useEffect(() => { localStorage.setItem('app_history', JSON.stringify(history)); }, [history]);
   useEffect(() => { localStorage.setItem('app_theme_id', currentTheme.id); }, [currentTheme]);
 
   useEffect(() => {
@@ -106,14 +99,6 @@ const App: React.FC = () => {
       const data = await extractDataFromPdf(pdfFile);
       setExtractedData(data);
       setStatus(ProcessingStatus.SUCCESS);
-      
-      const newHistoryItem: HistoryItem = {
-        id: Date.now().toString(),
-        timestamp: Date.now(),
-        fileName: pdfFile.name,
-        data: data
-      };
-      setHistory(prev => [newHistoryItem, ...prev]);
     } catch (err: any) {
       console.error(err);
       setStatus(ProcessingStatus.ERROR);
@@ -145,7 +130,7 @@ const App: React.FC = () => {
   const handleCopy = async () => {
     if (extractedData.length === 0) return;
     const rows = extractedData.map(d => 
-      `${d.symbol || ''}\t${d.date?.replace(/'/g, '') || ''}\t${d.docType} ${d.summary}\t${d.authority || ''}\t${d.pageRange || ''}` // No longer needs .replace(/'/g, '') here
+      `${d.symbol || ''}\t${d.date || ''}\t${d.docType} ${d.summary}\t${d.authority || ''}\t${d.pageRange || ''}`
     ).join('\n');
     
     try {
@@ -158,17 +143,14 @@ const App: React.FC = () => {
     }
   };
 
-  const handleDeleteHistory = (id: string) => {
-    setHistory(history.filter(h => h.id !== id));
-    notify("Đã xóa bản ghi lịch sử", "info");
-  };
-
-  const handleLoadHistory = (item: HistoryItem) => {
-    setExtractedData(item.data);
-    setStatus(ProcessingStatus.SUCCESS);
-    setFile(new File([], item.fileName));
-    setShowHistory(false);
-    notify(`Đã tải lại kết quả: ${item.fileName}`, "success");
+  const handleReset = () => {
+    setExtractedData([]);
+    setFile(null);
+    setStatus(ProcessingStatus.IDLE);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+    notify("Đã làm mới ứng dụng", "info");
   };
 
   return (
@@ -183,18 +165,18 @@ const App: React.FC = () => {
               <Cpu size={24} />
             </div>
             <div className="flex flex-col">
-              <span className={`text-xl font-black text-${g}-900 tracking-tight leading-none`}>DocuExtract AI</span>
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Lưu trữ chuyên nghiệp v2.2</span>
+              <span className={`text-xl font-black text-${g}-900 tracking-tight leading-none`}>DocuExtract AI Pro</span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Lưu trữ chuyên nghiệp v3.0</span>
             </div>
           </div>
 
           <div className="flex items-center gap-4">
             <button
-              onClick={() => setShowHistory(true)}
+              onClick={handleReset}
               className="group flex items-center gap-2 px-5 py-2.5 rounded-2xl font-bold text-slate-600 hover:bg-white hover:shadow-md transition-all active:scale-95"
             >
-              <History size={18} className="group-hover:rotate-[-30deg] transition-transform" /> 
-              <span className="hidden sm:inline">Lịch sử</span>
+              <RotateCcw size={18} className="group-hover:rotate-[-45deg] transition-transform" /> 
+              <span className="hidden sm:inline">Làm mới</span>
             </button>
             <div className="w-px h-6 bg-slate-200 hidden sm:block"></div>
             <button 
@@ -207,10 +189,13 @@ const App: React.FC = () => {
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto px-6 py-10 no-print">
-        <div className="space-y-12 animate-in fade-in duration-700">
-          <BannerCarousel theme={currentTheme} />
-
+      <motion.main 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8, ease: "easeOut" }}
+        className="max-w-7xl mx-auto px-6 py-10 no-print"
+      >
+        <div className="space-y-12">
           <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 flex items-start gap-4 text-blue-800">
             <Info className="flex-shrink-0 mt-1" size={20} />
             <div className="text-sm">
@@ -359,7 +344,19 @@ const App: React.FC = () => {
             </div>
           </div>
         </div>
-      </main>
+      </motion.main>
+
+      <footer className="max-w-7xl mx-auto px-6 py-10 border-t border-slate-200/50 text-center no-print">
+        <div className="flex flex-col items-center gap-4">
+          <div className="flex items-center gap-2 opacity-50">
+            <Cpu size={16} />
+            <span className="text-xs font-black uppercase tracking-widest">DocuExtract AI Pro</span>
+          </div>
+          <p className="text-slate-400 text-sm font-medium">
+            © 2026 DocuExtract AI Pro. Hệ thống bóc tách văn bản hành chính thông minh.
+          </p>
+        </div>
+      </footer>
 
       {/* Printable Area - Only visible when printing */}
       <div className="hidden print:block p-10 bg-white min-h-screen">
@@ -391,33 +388,6 @@ const App: React.FC = () => {
           </div>
         </div>
       </div>
-
-      {showHistory && (
-        <div className="fixed inset-0 z-[60] flex justify-end no-print">
-          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" onClick={() => setShowHistory(false)} />
-          <div className="relative w-full max-w-md bg-white h-full shadow-2xl p-8 animate-in slide-in-from-right duration-500">
-            <div className="flex items-center justify-between mb-10">
-              <div className="flex items-center gap-3"><History size={20} /><h3 className="text-2xl font-black">Lịch sử</h3></div>
-              <button onClick={() => setShowHistory(false)}><X size={24} /></button>
-            </div>
-            <div className="space-y-4 overflow-y-auto max-h-[calc(100vh-200px)]">
-              {history.length === 0 ? (
-                <p className="text-center text-slate-400 py-10">Chưa có lịch sử trích xuất.</p>
-              ) : (
-                history.map(item => (
-                  <div key={item.id} className="p-5 bg-slate-50 rounded-3xl hover:bg-white cursor-pointer group transition-all" onClick={() => handleLoadHistory(item)}>
-                    <p className="font-black text-slate-900 truncate">{item.fileName}</p>
-                    <div className="flex justify-between items-center mt-2">
-                      <span className="text-[10px] text-slate-400">{new Date(item.timestamp).toLocaleString()}</span>
-                      <button onClick={(e) => { e.stopPropagation(); handleDeleteHistory(item.id); }} className="text-slate-300 hover:text-rose-500"><Trash2 size={16} /></button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
       {showNotification && (
         <div className="fixed top-10 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-top-10 no-print">

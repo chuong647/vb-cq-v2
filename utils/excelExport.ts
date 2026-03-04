@@ -1,5 +1,5 @@
 
-import XLSX from 'xlsx';
+import XLSX from 'xlsx-js-style';
 import { ExtractedDocument, ExcelExportConfig } from '../types';
 
 export const exportToExcel = (
@@ -9,7 +9,7 @@ export const exportToExcel = (
 ) => {
   const formattedData = data.map(item => ({
     "Số ký hiệu": item.symbol,
-    "Ngày tháng": item.date.replace(/'/g, ''),
+    "Ngày tháng": item.date,
     "Trích yếu nội dung": `${item.docType} ${item.summary}`,
     "Cơ quan ban hành": item.authority,
     "Số trang": item.pageRange, // No longer needs .replace(/'/g, '') here

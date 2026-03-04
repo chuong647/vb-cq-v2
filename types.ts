@@ -34,10 +34,3 @@ export interface ThemeConfig {
   primary: string; // Tailwind color name (e.g., 'blue', 'emerald')
   gray: string;    // Tailwind gray scale (e.g., 'slate', 'zinc')
 }
-
-export interface HistoryItem {
-  id: string;
-  timestamp: number;
-  fileName: string;
-  data: ExtractedDocument[];
-}

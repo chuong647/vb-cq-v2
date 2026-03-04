@@ -62,31 +62,26 @@ const documentSchema = {
   },
 };
 
-const processChunk = async (ai: GoogleGenAI, base64Data: string): Promise<ExtractedDocument[]> => {
-  const systemInstruction = `Bạn là chuyên gia văn thư lưu trữ với độ chính xác tuyệt đối. 
-Nhiệm vụ: Bóc tách TOÀN BỘ các văn bản hành chính trong tệp PDF.
+const processChunk = async (ai: GoogleGenAI, base64Data: string, pageOffset: number): Promise<ExtractedDocument[]> => {
+  const systemInstruction = `Bạn là chuyên gia văn thư lưu trữ cấp cao với khả năng bóc tách dữ liệu cực kỳ chính xác. 
+Nhiệm vụ: Duyệt qua TỪNG TRANG của tệp PDF để bóc tách TOÀN BỘ các văn bản hành chính.
 
-QUY TẮC NGHIÊM NGẶT (KHÔNG ĐƯỢC VI PHẠM):
-1. KHÔNG ĐẢO VĂN BẢN: Phải liệt kê văn bản theo đúng thứ tự xuất hiện trong file PDF từ trang đầu đến trang cuối. Không được xáo trộn vị trí.
-2. ĐỘ CHÍNH XÁC SỐ LƯỢNG: TUYỆT ĐỐI đảm bảo số lượng văn bản trích xuất là chính xác. Mỗi văn bản phải được xác định duy nhất bởi trang bắt đầu của nó (startPage) và các thông tin ký hiệu, ngày tháng. Không bỏ sót văn bản, không tạo văn bản trùng lặp không có thật.
-3. GIỮ NGUYÊN NỘI DUNG: Trích yếu phải bám sát văn bản gốc. Không tóm tắt làm mất đi các từ ngữ chuyên môn hoặc làm thay đổi ý nghĩa gốc.
-4. CƠ QUAN BAN HÀNH (authority): 
-   - KHÔNG viết in hoa tất cả các chữ cái.
-   - CHỈ viết hoa chữ cái đầu tiên và các từ là tên riêng (Ví dụ: 'Ủy ban nhân dân tỉnh Lâm Đồng').
-5. LOẠI VĂN BẢN & TRÍCH YẾU:
-   - Tách biệt rõ Loại văn bản (Quyết định, Công văn...) và Trích yếu.
-   - Trích yếu bắt đầu bằng chữ thường. Nếu là văn bản nhân sự, bắt buộc có tên đối tượng thụ hưởng.
-6. SỐ HIỆU: Ghi đầy đủ (Ví dụ: 123/QĐ-UBND).
-7. SỐ TRANG (startPage): Ưu tiên trích xuất số ghi bằng bút chì ở góc trên bên phải trang đầu của văn bản. Đây là yếu tố then chốt để phân biệt các văn bản. Nếu không thấy, hãy ước lượng dựa trên số thứ tự trang PDF thực tế.`;
+QUY TẮC TỐI THƯỢNG (KHÔNG ĐƯỢC SAI SÓT):
+1. ĐẢM BẢO SỐ LƯỢNG: Phải bóc tách ĐÚNG và ĐỦ số lượng văn bản có trong tệp. Không được bỏ sót bất kỳ văn bản nào, dù là văn bản ngắn hay nằm ở cuối trang.
+2. DẤU HIỆU NHẬN BIẾT: Mỗi khi thấy tiêu ngữ "CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM" hoặc tên cơ quan ban hành đi kèm với Số/Ký hiệu, đó là dấu hiệu bắt đầu một văn bản mới.
+3. THỨ TỰ VẬT LÝ: Liệt kê văn bản theo đúng trình tự xuất hiện từ trang đầu đến trang cuối. Tuyệt đối không được đảo lộn thứ tự.
+4. GIỮ NGUYÊN TRÍCH YẾU: Nội dung trích yếu phải đầy đủ, giữ nguyên văn phong hành chính, không tóm tắt làm mất thông tin quan trọng (đặc biệt là tên người, số tiền, địa danh).
+5. ĐỊNH DẠNG CƠ QUAN (authority): Viết hoa chữ cái đầu và tên riêng (Ví dụ: 'Sở Nội vụ tỉnh Lâm Đồng'). Không viết in hoa toàn bộ.
+6. SỐ TRANG (startPage): Ghi lại số trang bắt đầu của văn bản đó. Lưu ý: Trang đầu tiên của tệp này tương ứng với trang thứ ${pageOffset + 1} của toàn bộ hồ sơ.`;
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-3.1-pro-preview",
       contents: [
         {
           parts: [
             { inlineData: { mimeType: "application/pdf", data: base64Data } },
-            { text: "Hãy trích xuất danh sách văn bản theo đúng thứ tự xuất hiện, tuyệt đối không đảo văn bản và đảm bảo độ chính xác số lượng." }
+            { text: `Hãy kiểm tra kỹ từng trang và trích xuất TOÀN BỘ danh sách văn bản. Trang đầu tiên bạn đang thấy là trang số ${pageOffset + 1} của file gốc. Đảm bảo số lượng văn bản trích xuất khớp hoàn toàn với thực tế, không bỏ sót bất kỳ mục nào.` }
           ],
         },
       ],
@@ -121,18 +116,26 @@ export const extractDataFromPdf = async (file: File): Promise<ExtractedDocument[
   try {
     if (file.size <= API_LIMIT_BYTES) {
       const base64Data = await fileToBase64(file);
-      allResults = await processChunk(ai, base64Data);
+      allResults = await processChunk(ai, base64Data, 0);
     } else {
-      for (let i = 0; i < totalPdfPages; i += PAGES_PER_CHUNK) {
+      const OVERLAP = 1;
+      for (let i = 0; i < totalPdfPages; i += (PAGES_PER_CHUNK - OVERLAP)) {
         const newDoc = await PDFDocument.create();
         const end = Math.min(i + PAGES_PER_CHUNK, totalPdfPages);
+        
+        // If we've already processed the last chunk, break
+        if (i >= totalPdfPages) break;
+
         const pagesToCopy = Array.from({ length: end - i }, (_, k) => i + k);
         const copiedPages = await newDoc.copyPages(pdfDoc, pagesToCopy);
         copiedPages.forEach(page => newDoc.addPage(page));
         const pdfBytes = await newDoc.save();
         const base64Chunk = uint8ArrayToBase64(pdfBytes);
-        const chunkResults = await processChunk(ai, base64Chunk);
+        const chunkResults = await processChunk(ai, base64Chunk, i);
         allResults = [...allResults, ...chunkResults];
+
+        // If we reached the end of the PDF, break the loop
+        if (end === totalPdfPages) break;
       }
     }
 
@@ -168,7 +171,8 @@ export const extractDataFromPdf = async (file: File): Promise<ExtractedDocument[
         displayRange = `${startPage} - ${endPage}`;
       }
 
-      const formattedDate = doc.date ? (doc.date.startsWith("'") ? doc.date : `'${doc.date}`) : "";
+      const rawDate = doc.date || "";
+      const formattedDate = rawDate.startsWith("'") ? rawDate : `'${rawDate}`;
 
       return {
         ...doc,
