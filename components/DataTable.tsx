@@ -1,8 +1,8 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { ExtractedDocument, ThemeConfig } from '../types';
-import { FileSearch, ClipboardList } from 'lucide-react';
+import { FileSearch, ClipboardList, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface DataTableProps {
   data: ExtractedDocument[];
@@ -10,8 +10,13 @@ interface DataTableProps {
 }
 
 export const DataTable: React.FC<DataTableProps> = ({ data, theme }) => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
   const p = theme.primary;
   const g = theme.gray;
+
+  const totalPages = Math.ceil(data.length / itemsPerPage);
+  const paginatedData = data.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   if (data.length === 0) {
     return (
@@ -82,9 +87,9 @@ export const DataTable: React.FC<DataTableProps> = ({ data, theme }) => {
             </tr>
           </thead>
           <tbody>
-            {data.map((doc, index) => (
+            {paginatedData.map((doc, index) => (
               <motion.tr 
-                key={index} 
+                key={(currentPage - 1) * itemsPerPage + index} 
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.05 }}
@@ -114,8 +119,29 @@ export const DataTable: React.FC<DataTableProps> = ({ data, theme }) => {
       <div className={`p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-[10px] font-bold text-slate-400 uppercase tracking-widest no-print`}>
         <div className="flex items-center gap-2">
           <ClipboardList size={14} className={`text-${p}-500`} />
-          Tổng cộng: {data.length} văn bản (đã giữ đúng thứ tự gốc)
+          Tổng cộng: {data.length} văn bản
         </div>
+        
+        {totalPages > 1 && (
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className={`p-1 rounded hover:bg-slate-200 disabled:opacity-50`}
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <span>Trang {currentPage} / {totalPages}</span>
+            <button 
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className={`p-1 rounded hover:bg-slate-200 disabled:opacity-50`}
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        )}
+        
         <div>DocuExtract AI Pro Engine</div>
       </div>
     </motion.div>

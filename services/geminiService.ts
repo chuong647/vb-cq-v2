@@ -4,7 +4,7 @@ import { ExtractedDocument } from "../types";
 import { PDFDocument } from "pdf-lib";
 
 const API_LIMIT_BYTES = 30 * 1024 * 1024; 
-const PAGES_PER_CHUNK = 15; 
+const PAGES_PER_CHUNK = 10; 
 
 const uint8ArrayToBase64 = (bytes: Uint8Array): string => {
   let binary = "";
@@ -76,7 +76,7 @@ QUY TẮC TỐI THƯỢNG (KHÔNG ĐƯỢC SAI SÓT):
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3.1-pro-preview",
+      model: "gemini-3-flash-preview",
       contents: [
         {
           parts: [
@@ -118,7 +118,7 @@ export const extractDataFromPdf = async (file: File): Promise<ExtractedDocument[
       const base64Data = await fileToBase64(file);
       allResults = await processChunk(ai, base64Data, 0);
     } else {
-      const OVERLAP = 1;
+      const OVERLAP = 2;
       for (let i = 0; i < totalPdfPages; i += (PAGES_PER_CHUNK - OVERLAP)) {
         const newDoc = await PDFDocument.create();
         const end = Math.min(i + PAGES_PER_CHUNK, totalPdfPages);
