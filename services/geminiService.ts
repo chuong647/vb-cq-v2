@@ -106,7 +106,7 @@ QUY TẮC TỐI THƯỢNG (KHÔNG ĐƯỢC SAI SÓT):
 };
 
 export const extractDataFromPdf = async (file: File): Promise<ExtractedDocument[]> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
   const arrayBuffer = await file.arrayBuffer();
   const pdfDoc = await PDFDocument.load(arrayBuffer);
   const totalPdfPages = pdfDoc.getPageCount();
